@@ -47,8 +47,8 @@ def run_for_network(network: Network, algorithm, epsilons, max_rounds=5000):
 
 
 def main():
-    epsilons = [1e-1, 1e-2, 1e-3, 1e-4]
-    num_nodes = 80
+    epsilons = [1e-1, 2e-1, 3e-1, 4e-1, 5e-1]
+    num_nodes = 100
     visualizer = GossipVisualizer()
 
     networks = []
@@ -83,7 +83,7 @@ def main():
     print("Running experiments for networks:")
     for label, net in zip(labels, networks):
         print(f" - {label}")
-        lam2, rounds = run_for_network(net, algo, epsilons, max_rounds=2000)
+        lam2, rounds = run_for_network(net, algo, epsilons, max_rounds=10000)
         results.append(rounds)
         lambdas.append(lam2)
         spectral_gaps.append(1.0 - lam2)
@@ -100,7 +100,7 @@ def main():
         fig.savefig(os.path.join(out_dir, f"theory_vs_empirical_{label.replace(' ', '_')}.png"))
 
     # Plot spectral gap vs convergence for a chosen epsilon (e.g., 1e-3)
-    idx_eps = 2  # corresponds to 1e-3
+    idx_eps = 0  # corresponds to 1e-3
     conv_rounds = [r[idx_eps] for r in results]
     fig2 = visualizer.plot_spectral_gap_vs_convergence(spectral_gaps, conv_rounds, labels,
                                                       title=f"Spectral Gap vs Rounds (ε={epsilons[idx_eps]})")

@@ -347,23 +347,35 @@ class GossipVisualizer:
     ) -> plt.Figure:
         """
         Plot predicted T(ε) = log(1/ε) / log(1/λ) vs empirical rounds.
+        Includes paper's theoretical bounds: 0.5*log(1/ε)/log(1/λ) ≤ T_ave(ε) ≤ 3*log(1/ε)/log(1/λ)
         """
         eps = np.array(epsilons)
         empirical = np.array(empirical_rounds)
 
         # Avoid λ >=1 or λ<=0
         lam = max(min(lambda2, 0.9999), 1e-6)
-        predicted = np.log(1.0 / eps) / np.log(1.0 / lam)
+        
+        # Paper's theoretical bounds
+        lower_bound = 0.5 * np.log(1.0 / eps) / np.log(1.0 / lam)
+        upper_bound = 3.0 * np.log(1.0 / eps) / np.log(1.0 / lam)
 
         fig, ax = plt.subplots(figsize=figsize)
-        ax.plot(eps, empirical, 'o-', label='Empirical', linewidth=2)
-        ax.plot(eps, predicted, 's--', label='Predicted', linewidth=2)
+        
+        # Fill the region between bounds
+        ax.fill_between(eps, lower_bound, upper_bound, alpha=0.2, color='orange', label="Paper's theoretical bounds")
+        
+        # Plot bounds as lines
+        ax.plot(eps, lower_bound, '--', color='orange', linewidth=1.5, alpha=0.7, label='Lower bound (0.5×)')
+        ax.plot(eps, upper_bound, '--', color='red', linewidth=1.5, alpha=0.7, label='Upper bound (3×)')
+        
+        # Plot empirical and predicted
+        ax.plot(eps, empirical, 'o-', label='Empirical', linewidth=2, markersize=8)
 
         ax.set_xscale('log')
         ax.set_xlabel('ε (log scale)', fontsize=12)
         ax.set_ylabel('Rounds to Convergence', fontsize=12)
         ax.set_title(title + f" (λ2={lambda2:.4f})", fontsize=14, fontweight='bold')
-        ax.legend()
+        ax.legend(fontsize=10, loc='best')
         ax.grid(True, which='both', alpha=0.3)
 
         if save_path:
