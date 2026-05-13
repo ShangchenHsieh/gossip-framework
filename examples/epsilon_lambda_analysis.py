@@ -10,7 +10,6 @@ This script:
 Run from the framework root:
     python examples/epsilon_lambda_analysis.py
 """
-
 import numpy as np
 import os
 import sys
@@ -23,7 +22,7 @@ matplotlib.use('Agg')
 sys.path.insert(0, str(Path(__file__).parents[2].resolve()))
 
 from gossip_framework import (
-    Network, Simulator, PushGossip, MetricsCollector, GossipVisualizer
+    Network, Simulator, PushGossip, MetricsCollector, GossipVisualizer, PullGossip, PushPullGossip, RandomAveraging
 )
 
 
@@ -78,7 +77,7 @@ def main():
     spectral_gaps = []
     lambdas = []
 
-    algo = PushGossip(seed=123)
+    algo = RandomAveraging(seed=123)
 
     print("Running experiments for networks:")
     for label, net in zip(labels, networks):

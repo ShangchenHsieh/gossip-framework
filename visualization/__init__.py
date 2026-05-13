@@ -353,7 +353,8 @@ class GossipVisualizer:
         empirical = np.array(empirical_rounds)
 
         # Avoid λ >=1 or λ<=0
-        lam = max(min(lambda2, 0.9999), 1e-6)
+        lam = 0.5 * (1 + lambda2)
+        # lam = max(min(lam, 0.9999), 1e-6)
         
         # Paper's theoretical bounds
         lower_bound = 0.5 * np.log(1.0 / eps) / np.log(1.0 / lam)
