@@ -6,15 +6,25 @@ Execute from the gossip_framework directory
 if __name__ == "__main__":
     import numpy as np
     import sys
+    import importlib.util
     from pathlib import Path
     import matplotlib
 
     # Use non-interactive backend for scripts
     matplotlib.use('Agg')
 
-    # Add project root (parent of this package) to sys.path so
-    # `import gossip_framework` works when running this script directly.
-    sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
+    # Add project root and support running from this hyphenated checkout.
+    package_dir = Path(__file__).parent
+    sys.path.insert(0, str(package_dir.parent.resolve()))
+    if package_dir.name != "gossip_framework" and "gossip_framework" not in sys.modules:
+        spec = importlib.util.spec_from_file_location(
+            "gossip_framework",
+            package_dir / "__init__.py",
+            submodule_search_locations=[str(package_dir.resolve())],
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["gossip_framework"] = module
+        spec.loader.exec_module(module)
     
     from gossip_framework import (
         Network, Simulator, PushGossip, PullGossip,

@@ -22,7 +22,7 @@ class SimulationConfig:
     seed: Optional[int] = None
     
     # Algorithm configuration
-    algorithm: str = "push"  # push, pull, push_pull, random_averaging
+    algorithm: str = "push"  # push, pull, geographic, random_averaging
     algorithm_params: Dict[str, Any] = field(default_factory=dict)
     
     # Simulation parameters

@@ -6,13 +6,28 @@ Validates that the framework is working correctly.
 
 import sys
 import traceback
+import importlib.util
 from pathlib import Path
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 
 # Add framework to path (ensure parent dir is on sys.path so top-level
 # package imports like `import gossip_framework` work when running the
 # test file from inside the package directory)
-framework_path = Path(__file__).parent.parent
+package_dir = Path(__file__).parent
+framework_path = package_dir.parent
 sys.path.insert(0, str(framework_path.resolve()))
+if "gossip_framework" not in sys.modules and package_dir.name != "gossip_framework":
+    spec = importlib.util.spec_from_file_location(
+        "gossip_framework",
+        package_dir / "__init__.py",
+        submodule_search_locations=[str(package_dir.resolve())],
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["gossip_framework"] = module
+    spec.loader.exec_module(module)
 
 
 def test_imports():
@@ -21,8 +36,8 @@ def test_imports():
     try:
         from gossip_framework import (
             Network, Node, Simulator,
-            PushGossip, PullGossip, PushPullGossip, RandomAveraging,
-            MetricsCollector, GossipVisualizer, SimulationConfig
+            PushGossip, PullGossip, GeographicGossip, RandomAveraging,
+            PathAveraging, MetricsCollector, GossipVisualizer, SimulationConfig
         )
         print("✓ All imports successful")
         return True
@@ -65,7 +80,7 @@ def test_algorithms():
     try:
         from gossip_framework import (
             Network, PushGossip, PullGossip, 
-            PushPullGossip, RandomAveraging
+            GeographicGossip, RandomAveraging, PathAveraging
         )
         import numpy as np
         
@@ -75,8 +90,9 @@ def test_algorithms():
         algorithms = [
             ("Push", PushGossip()),
             ("Pull", PullGossip()),
-            ("Push-Pull", PushPullGossip()),
+            ("Geographic", GeographicGossip(seed=3)),
             ("Random Averaging", RandomAveraging()),
+            ("Path Averaging", PathAveraging(seed=5)),
         ]
         
         for algo_name, algo in algorithms:
@@ -87,6 +103,107 @@ def test_algorithms():
         return True
     except Exception as e:
         print(f"✗ Algorithm test failed: {e}")
+        traceback.print_exc()
+        return False
+
+
+def test_random_averaging_matches_pairwise_model():
+    """Random averaging should perform one average-preserving pairwise tick."""
+    print("\n[TEST 4] Testing random averaging pairwise model...")
+    try:
+        from gossip_framework import Network, RandomAveraging
+        import numpy as np
+
+        initial_values = np.array([0.0, 2.0, 5.0, 9.0])
+        network = Network(4, initial_values=initial_values, seed=42)
+        network.create_complete_graph()
+
+        initial_average = network.get_average_value()
+        messages = RandomAveraging(seed=7).round(network)
+        final_state = network.get_state_vector()
+
+        assert messages == 1, f"Expected one clock tick, got {messages}"
+        assert np.isclose(np.mean(final_state), initial_average), "Average was not preserved"
+        changed = np.flatnonzero(~np.isclose(final_state, initial_values))
+        assert len(changed) in (0, 2), f"Expected one pair to change, got nodes {changed}"
+        print("  âœ“ Random averaging preserves the average with one pairwise tick")
+        return True
+    except Exception as e:
+        print(f"âœ— Random averaging pairwise model failed: {e}")
+        traceback.print_exc()
+        return False
+
+
+def test_average_consensus_algorithms_preserve_sum():
+    """Average-consensus algorithms should preserve the global sum."""
+    print("\n[TEST 5] Testing average preservation...")
+    try:
+        from gossip_framework import (
+            Network, PushGossip, PullGossip, GeographicGossip, RandomAveraging, PathAveraging
+        )
+        import numpy as np
+
+        algorithms = [
+            PushGossip(seed=1),
+            PullGossip(seed=2),
+            GeographicGossip(clock_ticks_per_round=4, seed=3),
+            RandomAveraging(clock_ticks_per_round=8, seed=4),
+            PathAveraging(clock_ticks_per_round=4, seed=5),
+        ]
+
+        for algorithm in algorithms:
+            network = Network(8, initial_values=np.arange(8, dtype=float), seed=42)
+            network.create_complete_graph()
+            before = network.get_state_vector().sum()
+            algorithm.round(network)
+            after = network.get_state_vector().sum()
+            assert np.isclose(before, after), f"{algorithm} changed sum from {before} to {after}"
+
+        print("  âœ“ All averaging algorithms preserve the global sum")
+        return True
+    except Exception as e:
+        print(f"âœ— Average preservation failed: {e}")
+        traceback.print_exc()
+        return False
+
+
+def test_path_averaging_averages_routed_path():
+    """Path averaging should average all nodes on the routed path."""
+    print("\n[TEST 6] Testing path averaging routed-path update...")
+    try:
+        from gossip_framework import Network, PathAveraging
+        import numpy as np
+
+        initial_values = np.array([1.0, 3.0, 9.0, 27.0, 81.0])
+        positions = [
+            (0.0, 0.0),
+            (1.0, 0.0),
+            (0.0, 1.0),
+            (1.0, 1.0),
+            (0.5, 0.5),
+        ]
+        network = Network(5, initial_values=initial_values, positions=positions, seed=42)
+        network.create_complete_graph()
+
+        before_sum = network.get_state_vector().sum()
+        messages = PathAveraging(seed=0).round(network)
+        final_state = network.get_state_vector()
+        changed = np.flatnonzero(~np.isclose(final_state, initial_values))
+
+        assert np.isclose(before_sum, final_state.sum()), "Path averaging changed the global sum"
+        assert messages % 2 == 0, f"Expected forward-plus-return message count, got {messages}"
+        assert messages == 2 * max(0, len(changed) - 1), (
+            f"Expected message count to match changed path length, got {messages}"
+        )
+        if len(changed) > 0:
+            assert np.allclose(final_state[changed], final_state[changed[0]]), (
+                f"Changed path nodes did not share one average: {final_state[changed]}"
+            )
+
+        print("  OK Path averaging preserves the sum and averages the routed path")
+        return True
+    except Exception as e:
+        print(f"FAIL Path averaging routed-path update failed: {e}")
         traceback.print_exc()
         return False
 
@@ -216,6 +333,9 @@ def main():
         test_imports,
         test_network_creation,
         test_algorithms,
+        test_random_averaging_matches_pairwise_model,
+        test_average_consensus_algorithms_preserve_sum,
+        test_path_averaging_averages_routed_path,
         test_simulation,
         test_visualization,
         test_configuration,

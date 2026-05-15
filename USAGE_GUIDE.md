@@ -29,7 +29,7 @@ The framework is structured in three main layers:
          │  (Gossip protocols)  │       │  (Topologies)       │
          │ - Push               │       │ - Complete          │
          │ - Pull               │       │ - Random            │
-         │ - Push-Pull          │       │ - Ring              │
+         │ - Geographic         │       │ - Ring              │
          │ - Random Averaging   │       │ - Lattice           │
          └──────────────────────┘       │ - Scale-free        │
                                         └─────────────────────┘
@@ -83,8 +83,11 @@ The framework is structured in three main layers:
    ├── GossipAlgorithm (base class)
    ├── PushGossip
    ├── PullGossip
-   ├── PushPullGossip(push_probability)
-   └── RandomAveraging(interactions_per_node)
+   ├── GeographicGossip(clock_ticks_per_round)
+   ├── RandomAveraging(clock_ticks_per_round)
+   └── PathAveraging(clock_ticks_per_round)
+
+   PathAveraging routes to random geographic targets and averages all nodes on the routed path.
 
 3. METRICS (metrics/)
    └── MetricsCollector()
@@ -131,12 +134,12 @@ print(f"Final error: {results['final_error']:.2e}")
 WORKFLOW 2: Compare Algorithms
 ───────────────────────────────
 
-from gossip_framework import PullGossip, PushPullGossip
+from gossip_framework import PullGossip, GeographicGossip
 
 algorithms = {
     'Push': PushGossip(),
     'Pull': PullGossip(),
-    'Push-Pull': PushPullGossip(),
+    'Geographic': GeographicGossip(),
 }
 
 results_dict = {}
@@ -314,7 +317,7 @@ Message Efficiency:
 
 1. For Experimental Validation:
    ✓ Use random graphs with varying edge probabilities
-   ✓ Compare Push, Pull, and Push-Pull
+   ✓ Compare Push, Pull, and Geographic
    ✓ Analyze network size scaling
    ✓ Plot with error bars (run multiple trials)
 
@@ -382,3 +385,4 @@ Questions about your paper's algorithms?
 
 if __name__ == "__main__":
     print(__doc__)
+

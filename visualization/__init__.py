@@ -347,13 +347,13 @@ class GossipVisualizer:
     ) -> plt.Figure:
         """
         Plot predicted T(ε) = log(1/ε) / log(1/λ) vs empirical rounds.
-        Includes paper's theoretical bounds: 0.5*log(1/ε)/log(1/λ) ≤ T_ave(ε) ≤ 3*log(1/ε)/log(1/λ)
+        Includes the paper's bounds using the supplied one-clock-tick gossip eigenvalue.
         """
         eps = np.array(epsilons)
         empirical = np.array(empirical_rounds)
 
         # Avoid λ >=1 or λ<=0
-        lam = 0.5 * (1 + lambda2)
+        lam = max(min(lambda2, 0.999999), 1e-12)
         # lam = max(min(lam, 0.9999), 1e-6)
         
         # Paper's theoretical bounds

@@ -7,7 +7,14 @@ with support for various network topologies, parameters, and visualization.
 __version__ = "0.1.0"
 
 from .core import Network, Node, Simulator
-from .algorithms import GossipAlgorithm, PushGossip, PullGossip, PushPullGossip, RandomAveraging
+from .algorithms import (
+    GossipAlgorithm,
+    PushGossip,
+    PullGossip,
+    GeographicGossip,
+    RandomAveraging,
+    PathAveraging,
+)
 from .config import SimulationConfig
 from .metrics import MetricsCollector
 from .visualization import GossipVisualizer
@@ -19,8 +26,9 @@ __all__ = [
     "GossipAlgorithm",
     "PushGossip",
     "PullGossip",
-    "PushPullGossip",
+    "GeographicGossip",
     "RandomAveraging",
+    "PathAveraging",
     "SimulationConfig",
     "MetricsCollector",
     "GossipVisualizer",

@@ -197,11 +197,11 @@ def example_convergence_benchmark():
     ]
     
     # Additional imports
-    from gossip_framework import PushGossip, PullGossip, PushPullGossip
+    from gossip_framework import PushGossip, PullGossip, GeographicGossip
     algorithms.extend([
         ("Push", PushGossip(seed=42)),
         ("Pull", PullGossip(seed=42)),
-        ("Push-Pull (50%)", PushPullGossip(push_probability=0.5, seed=42)),
+        ("Geographic", GeographicGossip(seed=42)),
     ])
     
     results = {}

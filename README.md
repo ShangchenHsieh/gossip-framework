@@ -22,7 +22,7 @@ gossip_framework/
 │   └── simulator.py      # Main simulation engine
 ├── algorithms/          # Algorithm implementations
 │   ├── base.py          # Abstract base class
-│   └── gossip_protocols.py  # Push, Pull, Push-Pull algorithms
+│   └── gossip_protocols.py  # Push, Pull, Geographic, Random Averaging algorithms
 ├── metrics/             # Metrics collection
 │   └── __init__.py      # MetricsCollector class
 ├── visualization/       # Plotting and visualization
@@ -88,12 +88,12 @@ fig.savefig("messages.png")
 ### Comparing Algorithms
 
 ```python
-from gossip_framework import PushGossip, PullGossip, PushPullGossip
+from gossip_framework import PushGossip, PullGossip, GeographicGossip
 
 algorithms = {
     'Push': PushGossip(),
     'Pull': PullGossip(),
-    'Push-Pull': PushPullGossip(),
+    'Geographic': GeographicGossip(),
 }
 
 results_dict = {}
@@ -136,8 +136,9 @@ Available algorithms:
 
 - **PushGossip**: Each node sends to a random neighbor
 - **PullGossip**: Each node pulls from a random neighbor
-- **PushPullGossip**: Combines push and pull operations
-- **RandomAveraging**: Supports multiple interactions per round
+- **GeographicGossip**: Samples random geographic targets, greedy-routes through the topology, applies Voronoi rejection sampling, and averages the endpoints
+- **RandomAveraging**: Asynchronous pairwise averaging; one node wakes up per clock tick, contacts one neighbor, and both endpoints average
+- **PathAveraging**: Routes to random geographic targets and averages all nodes on the routed path
 
 Create custom algorithms by subclassing `GossipAlgorithm`:
 

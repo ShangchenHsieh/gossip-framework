@@ -11,22 +11,38 @@ Run from the framework root:
     python examples/epsilon_lambda_analysis.py
 """
 import numpy as np
+import argparse
 import os
 import sys
+import importlib.util
 import matplotlib
 from pathlib import Path
 
 # Use non-interactive backend for scripts
 matplotlib.use('Agg')
 
-sys.path.insert(0, str(Path(__file__).parents[2].resolve()))
+package_dir = Path(__file__).parents[1]
+sys.path.insert(0, str(package_dir.parent.resolve()))
+if package_dir.name != "gossip_framework" and "gossip_framework" not in sys.modules:
+    spec = importlib.util.spec_from_file_location(
+        "gossip_framework",
+        package_dir / "__init__.py",
+        submodule_search_locations=[str(package_dir.resolve())],
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["gossip_framework"] = module
+    spec.loader.exec_module(module)
 
 from gossip_framework import (
-    Network, Simulator, PushGossip, MetricsCollector, GossipVisualizer, PullGossip, PushPullGossip, RandomAveraging
+    Network, Simulator, MetricsCollector, GossipVisualizer, RandomAveraging
 )
 
 
-def run_for_network(network: Network, algorithm, epsilons, max_rounds=5000):
+DEFAULT_MAX_ROUNDS = 300_000
+DEFAULT_EPSILONS = [1e-1, 5e-2, 1e-2, 5e-3, 1e-3]
+
+
+def run_for_network(network: Network, algorithm, epsilons, max_rounds=DEFAULT_MAX_ROUNDS):
     """Run simulator for a list of epsilons and return rounds-to-converge list."""
     initial_vals = network.get_state_vector().copy()
     rounds = []
@@ -45,8 +61,22 @@ def run_for_network(network: Network, algorithm, epsilons, max_rounds=5000):
     return lam2, rounds
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Generate epsilon/lambda plots for the random averaging algorithm."
+    )
+    parser.add_argument(
+        "--max-rounds",
+        type=int,
+        default=DEFAULT_MAX_ROUNDS,
+        help="Maximum simulator rounds per epsilon value.",
+    )
+    return parser.parse_args()
+
+
 def main():
-    epsilons = [1e-1, 2e-1, 3e-1, 4e-1, 5e-1]
+    args = parse_args()
+    epsilons = DEFAULT_EPSILONS
     num_nodes = 100
     visualizer = GossipVisualizer()
 
@@ -77,12 +107,13 @@ def main():
     spectral_gaps = []
     lambdas = []
 
-    algo = RandomAveraging(seed=123)
+    algo = RandomAveraging(seed=122)
 
-    print("Running experiments for networks:")
+    print(f"Running random averaging experiments with max_rounds={args.max_rounds}:")
     for label, net in zip(labels, networks):
         print(f" - {label}")
-        lam2, rounds = run_for_network(net, algo, epsilons, max_rounds=10000)
+        lam2, rounds = run_for_network(net, algo, epsilons, max_rounds=args.max_rounds)
+        print(f"   lambda2={lam2:.6f}, rounds={rounds}")
         results.append(rounds)
         lambdas.append(lam2)
         spectral_gaps.append(1.0 - lam2)
@@ -98,8 +129,8 @@ def main():
                                   title=f"{label}: Theoretical vs Empirical")
         fig.savefig(os.path.join(out_dir, f"theory_vs_empirical_{label.replace(' ', '_')}.png"))
 
-    # Plot spectral gap vs convergence for a chosen epsilon (e.g., 1e-3)
-    idx_eps = 0  # corresponds to 1e-3
+    # Plot spectral gap vs convergence for a chosen epsilon.
+    idx_eps = 0
     conv_rounds = [r[idx_eps] for r in results]
     fig2 = visualizer.plot_spectral_gap_vs_convergence(spectral_gaps, conv_rounds, labels,
                                                       title=f"Spectral Gap vs Rounds (ε={epsilons[idx_eps]})")

@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, '/Users/sean/Classes/CS_262')
 
 from gossip_framework import (
-    Network, Simulator, PushGossip, PushPullGossip,
+    Network, Simulator, PushGossip, GeographicGossip,
     MetricsCollector, GossipVisualizer, SimulationConfig
 )
 
@@ -95,29 +95,29 @@ def example_edge_probability_sensitivity():
     return edge_probs, results
 
 
-def example_push_pull_ratio_sensitivity():
-    """Analyze impact of push-pull ratio on convergence."""
+def example_geographic_sampling_sensitivity():
+    """Analyze impact of geographic gossip area-sampling resolution."""
     print("\n" + "=" * 60)
-    print("Example 2c: Push-Pull Ratio Sensitivity")
+    print("Example 2c: Geographic Gossip Sampling Sensitivity")
     print("=" * 60)
     
-    push_probs = [0.0, 0.25, 0.5, 0.75, 1.0]
+    area_samples = [512, 1024, 2048, 4096]
     num_nodes = 50
     results = []
     
-    for push_prob in push_probs:
-        print(f"Simulating with push probability {push_prob}...")
+    for samples in area_samples:
+        print(f"Simulating with {samples} Voronoi area samples...")
         
         network = Network(num_nodes, initial_values=np.random.uniform(0, 1, num_nodes), seed=42)
-        network.create_complete_graph()
+        network.create_random_geometric_graph()
         
-        algorithm = PushPullGossip(push_probability=push_prob, seed=42)
+        algorithm = GeographicGossip(area_samples=samples, seed=42)
         metrics = MetricsCollector()
         simulator = Simulator(network, algorithm, metrics, verbose=False)
         
         result = simulator.run(num_rounds=500, convergence_threshold=1e-6)
         results.append({
-            "push_probability": push_prob,
+            "area_samples": samples,
             "convergence_rounds": result['total_rounds'],
             "final_error": result['final_error'],
             "total_messages": sum(metrics.messages),
@@ -125,12 +125,12 @@ def example_push_pull_ratio_sensitivity():
     
     # Print results
     print("\nResults:")
-    print(f"{'Push Prob':<12} {'Conv. Rounds':<15} {'Avg Error':<15}")
+    print(f"{'Area Samples':<14} {'Conv. Rounds':<15} {'Avg Error':<15}")
     print("-" * 42)
     for r in results:
-        print(f"{r['push_probability']:<12.2f} {r['convergence_rounds']:<15} {r['final_error']:<15.2e}")
+        print(f"{r['area_samples']:<14} {r['convergence_rounds']:<15} {r['final_error']:<15.2e}")
     
-    return push_probs, results
+    return area_samples, results
 
 
 def example_multiple_trials():
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     # Run sensitivity analyses
     sizes, size_results = example_network_size_sensitivity()
     edge_probs, edge_results = example_edge_probability_sensitivity()
-    push_probs, push_pull_results = example_push_pull_ratio_sensitivity()
+    area_samples, geographic_results = example_geographic_sampling_sensitivity()
     multi_trial_results = example_multiple_trials()
     
     # Create visualizations
